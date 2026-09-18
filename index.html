@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小兔子的速算大挑戰</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700;800&family=Noto+Sans+TC:wght@600;800;900&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', 'Fredoka', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #fef3c7 50%, #fce7f3 100%);
+            user-select: none;
+            -webkit-user-select: none;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .font-num {
+            font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+        }
+
+        @keyframes float-gentle {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-6px) rotate(1.5deg); }
+        }
+        
+        @keyframes happy-bounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            30% { transform: translateY(-18px) scale(1.08) rotate(-3deg); }
+            50% { transform: translateY(-22px) scale(1.12) rotate(3deg); }
+            75% { transform: translateY(-4px) scale(1.02); }
+        }
+
+        @keyframes shake-error {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px) rotate(-1.5deg); }
+            40%, 80% { transform: translateX(8px) rotate(1.5deg); }
+        }
+
+        .animate-float {
+            animation: float-gentle 3.5s infinite ease-in-out;
+        }
+
+        .animate-happy {
+            animation: happy-bounce 0.7s ease-in-out;
+        }
+
+        .animate-shake {
+            animation: shake-error 0.4s ease-in-out;
+        }
+
+        .option-card {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 5px 0 rgba(0, 0, 0, 0.12);
+        }
+
+        .option-card:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 0 rgba(0, 0, 0, 0.12);
+        }
+
+        .option-card:active:not(:disabled) {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+        }
+
+        .speech-left::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-width: 8px 12px 8px 0;
+            border-style: solid;
+            border-color: transparent #ffffff transparent transparent;
+            display: block;
+            width: 0;
+            filter: drop-shadow(-2px 0 0 #fcd34d);
+        }
+
+        /* SVG Rabbit Ear Wiggle */
+        .rabbit-ear-l {
+            transform-origin: bottom center;
+            animation: earWiggleL 3s infinite ease-in-out;
+        }
+        .rabbit-ear-r {
+            transform-origin: bottom center;
+            animation: earWiggleR 3.2s infinite ease-in-out;
+        }
+
+        @keyframes earWiggleL {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(-5deg); }
+        }
+
+        @keyframes earWiggleR {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(5deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-3 sm:p-6">
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-wrapper" class="w-full max-w-5xl bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border-4 border-amber-300 p-4 sm:p-6 relative overflow-hidden flex flex-col justify-between my-auto min-h-[560px]">
+        
+        <!-- TOP NAVIGATION & STATUS BAR -->
+        <header id="header-bar" class="w-full flex flex-wrap items-center justify-between bg-gradient-to-r from-amber-100 via-orange-50 to-amber-100 rounded-2xl px-4 py-2.5 border-2 border-amber-200 shadow-sm gap-2 hidden">
+            <!-- Progress Counter & Combo Badge -->
+            <div class="flex items-center gap-2 sm:gap-4">
+                <span class="text-amber-900 font-extrabold text-sm sm:text-base">
+                    第 <span id="current-q-num" class="text-xl sm:text-2xl text-orange-600 font-black font-num">1</span> / <span id="total-q-num" class="text-sm text-amber-800 font-bold font-num">10</span> 題
+                </span>
+                
+                <!-- Streak Combo Badge -->
+                <div id="combo-badge" class="hidden items-center gap-1 bg-gradient-to-r from-rose-500 to-amber-500 text-white font-black text-xs sm:text-sm px-3 py-0.5 rounded-full shadow-sm animate-pulse">
+                    🔥 <span id="combo-count">0</span> 連勝！
+                </div>
+            </div>
+
+            <!-- Carrot Score & Timer Counter -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div class="flex items-center bg-white px-3 py-1 rounded-full border-2 border-orange-300 shadow-sm">
+                    <span class="text-lg sm:text-xl mr-1">🥕</span>
+                    <span id="carrot-score" class="font-num text-lg sm:text-xl font-black text-orange-600">0</span>
+                </div>
+
+                <div class="flex items-center bg-white px-3 py-1 rounded-full border-2 border-amber-300 shadow-sm text-amber-900 font-bold text-xs sm:text-sm">
+                    ⏱️ <span id="timer-display" class="font-num text-sm sm:text-base font-black text-amber-800 ml-1">00:00</span>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex items-center gap-2">
+                <button id="sound-btn" onclick="toggleSound()" title="切換音效" class="w-9 h-9 bg-white rounded-xl border-2 border-amber-300 flex items-center justify-center text-base shadow-sm hover:bg-amber-50 active:scale-95 transition">
+                    🔊
+                </button>
+                <button onclick="confirmExit()" title="回到首頁" class="px-3 h-9 bg-amber-200/80 hover:bg-amber-200 text-amber-950 rounded-xl font-bold transition flex items-center gap-1 text-xs sm:text-sm">
+                    🏠 首頁
+                </button>
+            </div>
+        </header>
+
+        <!-- SCREEN 1: WELCOME & START PAGE -->
+        <div id="start-screen" class="flex-1 flex flex-col items-center justify-center p-2 sm:p-4 text-center my-auto">
+            
+            <!-- Title Header -->
+            <div class="mb-4">
+                <div class="inline-block bg-gradient-to-r from-amber-400 via-orange-400 to-pink-400 text-white font-black text-3xl sm:text-4xl lg:text-5xl px-8 py-3 rounded-3xl shadow-lg border-4 border-white transform -rotate-1">
+                    小兔子的速算大挑戰
+                </div>
+                <p class="text-sm sm:text-base font-bold text-amber-900/80 mt-3">
+                    點擊答案即可知道對錯！幫小兔子採摘滿滿的胡蘿蔔吧！🥕
+                </p>
+            </div>
+
+            <!-- Central Content: SVG Mascot & Difficulty Cards -->
+            <div class="w-full max-w-3xl grid grid-cols-1 md:grid-cols-12 gap-6 items-center my-4">
+                
+                <!-- Left: Interactive SVG Rabbit Mascot Card -->
+                <div class="md:col-span-5 flex flex-col items-center justify-center">
+                    <div class="relative cursor-pointer group" onclick="playRabbitSound()" title="點點小兔子！">
+                        <svg class="w-40 h-40 sm:w-48 sm:h-48 filter drop-shadow-xl animate-float group-hover:scale-105 transition-transform" viewBox="0 0 200 200">
+                            <!-- Ears -->
+                            <g class="rabbit-ear-l">
+                                <ellipse cx="75" cy="50" rx="16" ry="42" fill="#fbcfe8" stroke="#f472b6" stroke-width="4"/>
+                                <ellipse cx="75" cy="50" rx="9" ry="28" fill="#f472b6"/>
+                            </g>
+                            <g class="rabbit-ear-r">
+                                <ellipse cx="125" cy="50" rx="16" ry="42" fill="#fbcfe8" stroke="#f472b6" stroke-width="4"/>
+                                <ellipse cx="125" cy="50" rx="9" ry="28" fill="#f472b6"/>
+                            </g>
+                            <!-- Body -->
+                            <ellipse cx="100" cy="145" rx="45" ry="38" fill="#ffffff" stroke="#f3f4f6" stroke-width="3"/>
+                            <!-- Head -->
+                            <circle cx="100" cy="110" r="42" fill="#ffffff" stroke="#e5e7eb" stroke-width="3"/>
+                            <!-- Cheeks -->
+                            <ellipse cx="74" cy="118" rx="8" ry="5" fill="#fca5a5" opacity="0.6"/>
+                            <ellipse cx="126" cy="118" rx="8" ry="5" fill="#fca5a5" opacity="0.6"/>
+                            <!-- Eyes -->
+                            <circle cx="82" cy="106" r="5" fill="#1f2937"/>
+                            <circle cx="118" cy="106" r="5" fill="#1f2937"/>
+                            <circle cx="84" cy="104" r="1.8" fill="#ffffff"/>
+                            <circle cx="120" cy="104" r="1.8" fill="#ffffff"/>
+                            <!-- Nose & Mouth -->
+                            <polygon points="100,113 96,117 104,117" fill="#f472b6"/>
+                            <path d="M 96,120 Q 100,124 104,120" stroke="#f472b6" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                            <!-- Carrot in Paws -->
+                            <path d="M 100,140 L 115,160 L 90,152 Z" fill="#ea580c"/>
+                            <path d="M 115,160 Q 120,165 112,168" stroke="#15803d" stroke-width="3" fill="none"/>
+                        </svg>
+                        <div class="absolute -top-2 -right-2 bg-amber-400 text-amber-950 font-black text-xs px-2.5 py-1 rounded-full border-2 border-white shadow-md animate-pulse">
+                            點點我！
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Difficulty Selection Cards -->
+                <div class="md:col-span-7 flex flex-col gap-4 w-full max-w-md mx-auto">
+                    <button onclick="startGame('easy')" class="w-full py-4 px-6 text-left bg-gradient-to-r from-emerald-400 to-teal-500 text-white rounded-2xl option-card border-b-4 border-teal-700 hover:brightness-105 transition flex items-center justify-between">
+                        <div>
+                            <div class="font-black text-xl sm:text-2xl flex items-center gap-2">🌱 10以內基礎減法</div>
+                            <div class="text-xs sm:text-sm text-teal-100 font-bold mt-1">適合剛開始練習減法的小朋友</div>
+                        </div>
+                        <span class="text-2xl bg-white/20 px-3 py-1 rounded-xl">➔</span>
+                    </button>
+
+                    <button onclick="startGame('medium')" class="w-full py-4 px-6 text-left bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-2xl option-card border-b-4 border-orange-700 hover:brightness-105 transition flex items-center justify-between">
+                        <div>
+                            <div class="font-black text-xl sm:text-2xl flex items-center gap-2">🚀 20以內進階減法</div>
+                            <div class="text-xs sm:text-sm text-amber-100 font-bold mt-1">包含退位減法挑戰</div>
+                        </div>
+                        <span class="text-2xl bg-white/20 px-3 py-1 rounded-xl">➔</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Footer Quick Info -->
+            <div class="text-amber-800/60 font-bold text-xs sm:text-sm mt-2 flex items-center gap-3">
+                <span>⚡ 點擊即時驗證對錯</span>
+                <span>•</span>
+                <span>🎯 每輪 10 道題</span>
+                <span>•</span>
+                <span>⌨️ 支援鍵盤 1~4 選項快捷鍵</span>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: MAIN QUIZ PLAY AREA (Instant Verification) -->
+        <div id="game-screen" class="flex-1 flex flex-col justify-between py-2 hidden">
+            
+            <!-- Progress Dots Bar -->
+            <div id="progress-dots" class="flex justify-center gap-1.5 my-1">
+                <!-- Dots generated by JS -->
+            </div>
+
+            <!-- Main Interactive Play Grid -->
+            <div class="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 items-center my-2">
+                
+                <!-- LEFT COLUMN: SVG Mascot & Dynamic Speech Bubble -->
+                <div class="md:col-span-5 flex flex-col items-center justify-center relative">
+                    <div class="flex items-center gap-3 sm:gap-4 w-full justify-center">
+                        <div id="rabbit-mascot-container" class="cursor-pointer transition-transform duration-300 filter drop-shadow-md shrink-0" onclick="playRabbitSound()" title="點我發出聲音">
+                            <svg id="game-rabbit-svg" class="w-28 h-28 sm:w-36 sm:h-36 lg:w-44 lg:h-44" viewBox="0 0 200 200">
+                                <!-- Ears -->
+                                <g class="rabbit-ear-l">
+                                    <ellipse cx="75" cy="50" rx="16" ry="42" fill="#fbcfe8" stroke="#f472b6" stroke-width="4"/>
+                                    <ellipse cx="75" cy="50" rx="9" ry="28" fill="#f472b6"/>
+                                </g>
+                                <g class="rabbit-ear-r">
+                                    <ellipse cx="125" cy="50" rx="16" ry="42" fill="#fbcfe8" stroke="#f472b6" stroke-width="4"/>
+                                    <ellipse cx="125" cy="50" rx="9" ry="28" fill="#f472b6"/>
+                                </g>
+                                <!-- Body -->
+                                <ellipse cx="100" cy="145" rx="45" ry="38" fill="#ffffff" stroke="#f3f4f6" stroke-width="3"/>
+                                <!-- Head -->
+                                <circle cx="100" cy="110" r="42" fill="#ffffff" stroke="#e5e7eb" stroke-width="3"/>
+                                <!-- Cheeks -->
+                                <ellipse cx="74" cy="118" rx="8" ry="5" fill="#fca5a5" opacity="0.6"/>
+                                <ellipse cx="126" cy="118" rx="8" ry="5" fill="#fca5a5" opacity="0.6"/>
+                                <!-- Eyes (Dynamic) -->
+                                <g id="rabbit-eyes">
+                                    <circle cx="82" cy="106" r="5" fill="#1f2937"/>
+                                    <circle cx="118" cy="106" r="5" fill="#1f2937"/>
+                                    <circle cx="84" cy="104" r="1.8" fill="#ffffff"/>
+                                    <circle cx="120" cy="104" r="1.8" fill="#ffffff"/>
+                                </g>
+                                <!-- Mouth (Dynamic) -->
+                                <g id="rabbit-mouth">
+                                    <polygon points="100,113 96,117 104,117" fill="#f472b6"/>
+                                    <path d="M 96,120 Q 100,124 104,120" stroke="#f472b6" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                                </g>
+                            </svg>
+                        </div>
+
+                        <!-- Dynamic Speech Bubble -->
+                        <div id="speech-bubble" class="relative bg-white border-4 border-amber-300 text-amber-950 text-sm sm:text-base font-extrabold p-3 rounded-2xl shadow-md speech-left max-w-[180px] sm:max-w-xs transition-all duration-300 leading-snug">
+                            點擊正確答案按鈕喔！
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: Problem Board & Instant Verification Choice Grid -->
+                <div class="md:col-span-7 flex flex-col items-center justify-center gap-3">
+                    
+                    <!-- Subtraction Question Card -->
+                    <div id="question-card" class="w-full bg-gradient-to-br from-amber-50 to-orange-100 border-4 border-amber-300 rounded-3xl py-4 px-4 text-center shadow-inner relative">
+                        <div id="math-question" class="font-num text-4xl sm:text-5xl lg:text-6xl font-black text-gray-800 tracking-wider flex items-center justify-center gap-2 sm:gap-3">
+                            <!-- Question Equation rendered by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Instant Multiple Choice 2x2 Option Grid -->
+                    <div id="mc-options-container" class="w-full grid grid-cols-2 gap-3 my-1">
+                        <!-- 4 Instant Option Buttons dynamically generated -->
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Bottom Control Container -->
+            <div class="h-10 flex items-center justify-center mt-1">
+                <button id="next-btn" onclick="nextQuestion()" class="hidden px-8 py-2 text-base sm:text-lg font-black text-white bg-green-500 rounded-2xl option-card border-b-4 border-green-700 hover:bg-green-600 transition flex items-center justify-center gap-2 animate-bounce">
+                    下一題 ➔ (或按 Enter)
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: GAME OVER / SUMMARY PAGE -->
+        <div id="summary-screen" class="flex-1 flex flex-col items-center justify-center text-center p-2 my-auto hidden">
+            
+            <div class="relative mb-2">
+                <svg id="summary-rabbit-svg" class="w-28 h-28 sm:w-36 sm:h-36 filter drop-shadow-lg animate-float" viewBox="0 0 200 200">
+                    <g class="rabbit-ear-l"><ellipse cx="75" cy="50" rx="16" ry="42" fill="#fbcfe8" stroke="#f472b6" stroke-width="4"/><ellipse cx="75" cy="50" rx="9" ry="28" fill="#f472b6"/></g>
+                    <g class="rabbit-ear-r"><ellipse cx="125" cy="50" rx="16" ry="42" fill="#fbcfe8" stroke="#f472b6" stroke-width="4"/><ellipse cx="125" cy="50" rx="9" ry="28" fill="#f472b6"/></g>
+                    <ellipse cx="100" cy="145" rx="45" ry="38" fill="#ffffff" stroke="#f3f4f6" stroke-width="3"/>
+                    <circle cx="100" cy="110" r="42" fill="#ffffff" stroke="#e5e7eb" stroke-width="3"/>
+                    <ellipse cx="74" cy="118" rx="8" ry="5" fill="#fca5a5" opacity="0.6"/>
+                    <ellipse cx="126" cy="118" rx="8" ry="5" fill="#fca5a5" opacity="0.6"/>
+                    <circle cx="82" cy="106" r="5" fill="#1f2937"/><circle cx="118" cy="106" r="5" fill="#1f2937"/>
+                    <circle cx="84" cy="104" r="1.8" fill="#ffffff"/><circle cx="120" cy="104" r="1.8" fill="#ffffff"/>
+                    <polygon points="100,113 96,117 104,117" fill="#f472b6"/>
+                    <path d="M 96,120 Q 100,126 104,120" stroke="#f472b6" stroke-width="2.5" fill="none"/>
+                </svg>
+            </div>
+
+            <h2 class="text-2xl sm:text-3xl font-black text-amber-900 mb-0.5">🎉 挑戰完成！</h2>
+            <p class="text-sm sm:text-base text-amber-800/80 font-bold mb-2">太棒了！小兔子採收了滿滿的胡蘿蔔！</p>
+
+            <!-- Star Rating Badges -->
+            <div id="star-rating" class="flex gap-2 text-3xl sm:text-4xl my-1">
+                <!-- Dynamic Stars -->
+            </div>
+
+            <!-- Stats Card Grid -->
+            <div class="w-full max-w-md bg-amber-50/90 border-2 border-amber-200 rounded-3xl p-3 sm:p-4 my-2 shadow-sm space-y-2">
+                <div class="flex justify-between items-center text-sm sm:text-base font-bold text-gray-700">
+                    <span>答對題數：</span>
+                    <span id="summary-correct" class="font-num text-lg sm:text-xl font-black text-green-600">0 / 10</span>
+                </div>
+                <div class="flex justify-between items-center text-sm sm:text-base font-bold text-gray-700">
+                    <span>正確率：</span>
+                    <span id="summary-accuracy" class="font-num text-lg sm:text-xl font-black text-teal-600">0%</span>
+                </div>
+                <div class="flex justify-between items-center text-sm sm:text-base font-bold text-gray-700">
+                    <span>獲得胡蘿蔔：</span>
+                    <span id="summary-carrots" class="font-num text-lg sm:text-xl font-black text-orange-500">0 🥕</span>
+                </div>
+                <div class="flex justify-between items-center text-sm sm:text-base font-bold text-gray-700">
+                    <span>完成總耗時：</span>
+                    <span id="summary-time" class="font-num text-lg sm:text-xl font-black text-amber-800">00:00</span>
+                </div>
+                <div class="pt-1 border-t border-amber-200 flex justify-between items-center text-sm sm:text-base font-bold text-amber-950">
+                    <span>評價：</span>
+                    <span id="summary-feedback" class="font-black text-amber-900 text-base sm:text-lg">棒極了！</span>
+                </div>
+            </div>
+
+            <!-- Return Buttons -->
+            <div class="flex gap-3 w-full max-w-md mt-2">
+                <button onclick="startGame(currentDifficulty)" class="flex-1 py-2.5 text-base sm:text-lg font-black text-white bg-orange-500 rounded-2xl option-card border-b-4 border-orange-700 hover:bg-orange-600 transition">
+                    🔄 再玩一次
+                </button>
+                <button onclick="returnToStart()" class="flex-1 py-2.5 text-base sm:text-lg font-black text-amber-950 bg-amber-200 rounded-2xl option-card border-b-4 border-amber-400 hover:bg-amber-300 transition">
+                    🎛️ 切換難度
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- AUDIO & INTERACTIVE GAME LOGIC SCRIPT -->
+    <script>
+        // Web Audio Synthesizer Sound Engine
+        class SoundManager {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playTone(freq, type, duration) {
+                if (this.muted) return;
+                this.init();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            }
+
+            playCorrect() {
+                if (this.muted) return;
+                this.init();
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playTone(freq, 'triangle', 0.22), idx * 70);
+                });
+            }
+
+            playWrong() {
+                if (this.muted) return;
+                this.init();
+                this.playTone(220, 'sawtooth', 0.18);
+                setTimeout(() => this.playTone(180, 'sawtooth', 0.25), 130);
+            }
+
+            playRabbitSqueak() {
+                if (this.muted) return;
+                this.init();
+                this.playTone(880, 'sine', 0.08);
+                setTimeout(() => this.playTone(1320, 'sine', 0.1), 60);
+            }
+
+            playFanfare() {
+                if (this.muted) return;
+                this.init();
+                const melody = [523.25, 523.25, 523.25, 659.25, 783.99, 1046.50];
+                const delays = [0, 110, 220, 330, 440, 650];
+                melody.forEach((freq, i) => {
+                    setTimeout(() => this.playTone(freq, 'triangle', 0.28), delays[i]);
+                });
+            }
+        }
+
+        const sound = new SoundManager();
+
+        function toggleSound() {
+            sound.muted = !sound.muted;
+            document.getElementById('sound-btn').innerText = sound.muted ? '🔇' : '🔊';
+        }
+
+        function playRabbitSound() {
+            sound.playRabbitSqueak();
+            const mascot = document.getElementById('rabbit-mascot-container');
+            if (mascot) {
+                mascot.classList.add('scale-110');
+                setTimeout(() => mascot.classList.remove('scale-110'), 180);
+            }
+        }
+
+        function confirmExit() {
+            if (confirm("確定要離開目前的練習回到首頁嗎？")) {
+                returnToStart();
+            }
+        }
+
+        // State Variables
+        let currentDifficulty = 'easy';
+        let currentQuestionIndex = 0;
+        let totalQuestions = 10;
+        let score = 0;
+        let carrots = 0;
+        let streak = 0;
+        let questions = [];
+        let canAnswer = true;
+        let autoNextTimeout = null;
+        let startTime = null;
+        let timerInterval = null;
+        let elapsedTime = 0;
+        let currentOptionValues = [];
+
+        const happySpeech = [
+            "太棒了！答對囉！",
+            "算得真快！好厲害！",
+            "哇！又拿一顆胡蘿蔔！",
+            "完全正確！你是速算高手！",
+            "太讚了！繼續保持！"
+        ];
+
+        const wrongSpeech = [
+            "沒關係！看一下正確答案！",
+            "差一點點！下次一定可以！",
+            "不要灰心，繼續加油！",
+            "多練習就會越來越熟練喔！"
+        ];
+
+        function generateQuestions(count, diff) {
+            const list = [];
+            for (let i = 0; i < count; i++) {
+                let num1, num2;
+                if (diff === 'easy') {
+                    // Within 10
+                    num1 = Math.floor(Math.random() * 9) + 2; 
+                    num2 = Math.floor(Math.random() * (num1 - 1)) + 1; 
+                } else {
+                    // Within 20
+                    num1 = Math.floor(Math.random() * 11) + 10; // 10-20
+                    num2 = Math.floor(Math.random() * 9) + 2;  
+                }
+                const answer = num1 - num2;
+                list.push({ num1, num2, answer });
+            }
+            return list;
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            startTime = Date.now();
+            elapsedTime = 0;
+            timerInterval = setInterval(() => {
+                elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+                const mins = String(Math.floor(elapsedTime / 60)).padStart(2, '0');
+                const secs = String(elapsedTime % 60).padStart(2, '0');
+                document.getElementById('timer-display').innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        function startGame(diff = 'easy') {
+            if (autoNextTimeout) clearTimeout(autoNextTimeout);
+            currentDifficulty = diff;
+            totalQuestions = 10;
+            currentQuestionIndex = 0;
+            score = 0;
+            carrots = 0;
+            streak = 0;
+            questions = generateQuestions(totalQuestions, diff);
+
+            document.getElementById('carrot-score').innerText = '0';
+            document.getElementById('total-q-num').innerText = totalQuestions;
+            document.getElementById('combo-badge').classList.add('hidden');
+            document.getElementById('combo-badge').classList.remove('flex');
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('summary-screen').classList.add('hidden');
+            document.getElementById('header-bar').classList.remove('hidden');
+            document.getElementById('header-bar').classList.add('flex');
+            document.getElementById('game-screen').classList.remove('hidden');
+
+            startTimer();
+            renderProgressDots();
+            loadQuestion();
+        }
+
+        function returnToStart() {
+            stopTimer();
+            if (autoNextTimeout) clearTimeout(autoNextTimeout);
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('header-bar').classList.add('hidden');
+            document.getElementById('summary-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+        }
+
+        function renderProgressDots() {
+            const container = document.getElementById('progress-dots');
+            container.innerHTML = '';
+            for (let i = 0; i < totalQuestions; i++) {
+                const dot = document.createElement('div');
+                dot.id = `dot-${i}`;
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-gray-200 border border-gray-300 transition-all';
+                container.appendChild(dot);
+            }
+        }
+
+        function setRabbitExpression(type) {
+            const eyes = document.getElementById('rabbit-eyes');
+            const mouth = document.getElementById('rabbit-mouth');
+            
+            if (type === 'happy') {
+                eyes.innerHTML = `<path d="M 77,106 Q 82,100 87,106 M 113,106 Q 118,100 123,106" stroke="#1f2937" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+                mouth.innerHTML = `<path d="M 94,116 Q 100,126 106,116" stroke="#f472b6" stroke-width="3" fill="#f472b6"/>`;
+            } else if (type === 'sad') {
+                eyes.innerHTML = `<circle cx="82" cy="106" r="5" fill="#1f2937"/><circle cx="118" cy="106" r="5" fill="#1f2937"/><path d="M 72,98 L 84,102 M 128,98 L 116,102" stroke="#1f2937" stroke-width="2.5"/>`;
+                mouth.innerHTML = `<path d="M 96,122 Q 100,117 104,122" stroke="#f472b6" stroke-width="2.5" fill="none"/>`;
+            } else {
+                // Normal
+                eyes.innerHTML = `<circle cx="82" cy="106" r="5" fill="#1f2937"/><circle cx="118" cy="106" r="5" fill="#1f2937"/><circle cx="84" cy="104" r="1.8" fill="#ffffff"/><circle cx="120" cy="104" r="1.8" fill="#ffffff"/>`;
+                mouth.innerHTML = `<polygon points="100,113 96,117 104,117" fill="#f472b6"/><path d="M 96,120 Q 100,124 104,120" stroke="#f472b6" stroke-width="2.5" fill="none"/>`;
+            }
+        }
+
+        function loadQuestion() {
+            canAnswer = true;
+            if (autoNextTimeout) clearTimeout(autoNextTimeout);
+
+            const q = questions[currentQuestionIndex];
+
+            document.getElementById('next-btn').classList.add('hidden');
+            setRabbitExpression('normal');
+
+            const bubble = document.getElementById('speech-bubble');
+            bubble.innerText = "點擊正確答案按鈕喔！";
+            bubble.className = "relative bg-white border-4 border-amber-300 text-amber-950 text-sm sm:text-base font-extrabold p-3 rounded-2xl shadow-md speech-left max-w-[180px] sm:max-w-xs transition-all duration-300 leading-snug";
+
+            document.getElementById('current-q-num').innerText = currentQuestionIndex + 1;
+
+            const dot = document.getElementById(`dot-${currentQuestionIndex}`);
+            if (dot) {
+                dot.className = 'w-3.5 h-3.5 rounded-full bg-amber-400 border-2 border-orange-500 scale-125';
+            }
+
+            const questionCard = document.getElementById('math-question');
+            questionCard.innerHTML = `
+                <span>${q.num1}</span>
+                <span class="text-orange-500">-</span>
+                <span>${q.num2}</span>
+                <span class="text-amber-500">=</span>
+                <span id="question-target" class="text-orange-600 bg-white px-3 py-0.5 rounded-2xl border-2 border-dashed border-orange-300 font-black shadow-inner min-w-[60px] text-center">?</span>
+            `;
+
+            renderInstantOptions(q.answer);
+        }
+
+        function renderInstantOptions(correctAnswer) {
+            const container = document.getElementById('mc-options-container');
+            container.innerHTML = '';
+            currentOptionValues = [];
+
+            // Generate 3 unique distractor options
+            const optionsSet = new Set([correctAnswer]);
+            while (optionsSet.size < 4) {
+                let wrong = correctAnswer + (Math.floor(Math.random() * 7) - 3);
+                if (wrong >= 0 && wrong !== correctAnswer) {
+                    optionsSet.add(wrong);
+                }
+            }
+
+            // Shuffle
+            const options = Array.from(optionsSet).sort(() => Math.random() - 0.5);
+            currentOptionValues = options;
+
+            options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.id = `opt-btn-${idx}`;
+                btn.className = 'w-full py-3 sm:py-4 px-3 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-950 rounded-2xl border-2 border-amber-300 option-card flex items-center justify-between font-black text-2xl sm:text-3xl font-num transition relative';
+                
+                btn.innerHTML = `
+                    <span class="text-xs font-bold text-amber-800/60 bg-amber-200/60 px-2 py-0.5 rounded-lg">[${idx + 1}]</span>
+                    <span class="mx-auto">${opt}</span>
+                    <span id="opt-icon-${idx}" class="text-xl opacity-0 transition-opacity">✓</span>
+                `;
+
+                btn.onclick = () => handleAnswerSelect(opt, idx);
+                container.appendChild(btn);
+            });
+        }
+
+        function handleAnswerSelect(selectedVal, selectedIdx) {
+            if (!canAnswer) return;
+            canAnswer = false;
+
+            const q = questions[currentQuestionIndex];
+            const isCorrect = (selectedVal === q.answer);
+            const target = document.getElementById('question-target');
+            const bubble = document.getElementById('speech-bubble');
+            const mascotSvg = document.getElementById('game-rabbit-svg');
+            const dot = document.getElementById(`dot-${currentQuestionIndex}`);
+
+            // Fill target equation
+            target.innerText = selectedVal;
+
+            // Disable all option buttons
+            currentOptionValues.forEach((_, idx) => {
+                const btn = document.getElementById(`opt-btn-${idx}`);
+                if (btn) btn.disabled = true;
+            });
+
+            if (isCorrect) {
+                score++;
+                carrots++;
+                streak++;
+                document.getElementById('carrot-score').innerText = carrots;
+
+                // Combo Streak update
+                if (streak >= 2) {
+                    const badge = document.getElementById('combo-badge');
+                    badge.classList.remove('hidden');
+                    badge.classList.add('flex');
+                    document.getElementById('combo-count').innerText = streak;
+                }
+
+                sound.playCorrect();
+
+                // Highlight Selected Button (GREEN)
+                const selectedBtn = document.getElementById(`opt-btn-${selectedIdx}`);
+                const icon = document.getElementById(`opt-icon-${selectedIdx}`);
+                selectedBtn.className = "w-full py-3 sm:py-4 px-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl border-2 border-emerald-700 option-card flex items-center justify-between font-black text-2xl sm:text-3xl font-num transition scale-105 shadow-lg";
+                icon.innerText = "✓ 正確";
+                icon.className = "text-sm sm:text-base opacity-100 font-extrabold bg-white/20 px-2 py-0.5 rounded-lg";
+
+                target.className = "text-green-600 bg-green-100 px-3 py-0.5 rounded-2xl border-2 border-solid border-green-400 font-black shadow-inner min-w-[60px] text-center scale-105 transition";
+
+                setRabbitExpression('happy');
+                mascotSvg.classList.add('animate-happy');
+                setTimeout(() => mascotSvg.classList.remove('animate-happy'), 700);
+
+                const randomMsg = happySpeech[Math.floor(Math.random() * happySpeech.length)];
+                bubble.innerText = randomMsg;
+                bubble.className = "relative bg-green-100 border-4 border-green-400 text-green-950 text-sm sm:text-base font-extrabold p-3 rounded-2xl shadow-md speech-left max-w-[180px] sm:max-w-xs transition-all duration-300";
+
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-green-500 border border-green-600';
+
+                try {
+                    confetti({
+                        particleCount: 35,
+                        spread: 55,
+                        origin: { y: 0.6 }
+                    });
+                } catch(e){}
+
+                // Auto advance after 1.2s delay
+                autoNextTimeout = setTimeout(() => {
+                    nextQuestion();
+                }, 1200);
+
+            } else {
+                streak = 0;
+                document.getElementById('combo-badge').classList.add('hidden');
+                document.getElementById('combo-badge').classList.remove('flex');
+
+                sound.playWrong();
+
+                // Highlight Selected Button (RED)
+                const selectedBtn = document.getElementById(`opt-btn-${selectedIdx}`);
+                const icon = document.getElementById(`opt-icon-${selectedIdx}`);
+                selectedBtn.className = "w-full py-3 sm:py-4 px-3 bg-gradient-to-r from-rose-500 to-red-500 text-white rounded-2xl border-2 border-rose-700 option-card flex items-center justify-between font-black text-2xl sm:text-3xl font-num transition animate-shake shadow-md";
+                icon.innerText = "✕";
+                icon.className = "text-lg opacity-100 font-extrabold bg-white/20 px-2 py-0.5 rounded-lg";
+
+                // Highlight Correct Option (GREEN LIGHT)
+                const correctIdx = currentOptionValues.indexOf(q.answer);
+                if (correctIdx !== -1) {
+                    const correctBtn = document.getElementById(`opt-btn-${correctIdx}`);
+                    const correctIcon = document.getElementById(`opt-icon-${correctIdx}`);
+                    correctBtn.className = "w-full py-3 sm:py-4 px-3 bg-emerald-100 text-emerald-950 rounded-2xl border-2 border-emerald-500 option-card flex items-center justify-between font-black text-2xl sm:text-3xl font-num transition";
+                    correctIcon.innerText = "正確答案";
+                    correctIcon.className = "text-xs opacity-100 font-bold bg-emerald-200/80 px-2 py-0.5 rounded-lg text-emerald-900";
+                }
+
+                target.className = "text-red-600 bg-red-100 px-3 py-0.5 rounded-2xl border-2 border-solid border-red-400 font-black shadow-inner min-w-[60px] text-center animate-shake";
+
+                setRabbitExpression('sad');
+                mascotSvg.classList.add('animate-shake');
+                setTimeout(() => mascotSvg.classList.remove('animate-shake'), 400);
+
+                const randomWrong = wrongSpeech[Math.floor(Math.random() * wrongSpeech.length)];
+                bubble.innerText = `${randomWrong} 正確答案是 ${q.answer} 喔！`;
+                bubble.className = "relative bg-orange-100 border-4 border-orange-300 text-orange-950 text-sm sm:text-base font-extrabold p-3 rounded-2xl shadow-md speech-left max-w-[180px] sm:max-w-xs transition-all duration-300";
+
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-red-400 border border-red-500';
+
+                // Display Next Button when wrong
+                document.getElementById('next-btn').classList.remove('hidden');
+            }
+        }
+
+        function nextQuestion() {
+            if (autoNextTimeout) clearTimeout(autoNextTimeout);
+            currentQuestionIndex++;
+            if (currentQuestionIndex < totalQuestions) {
+                loadQuestion();
+            } else {
+                showSummary();
+            }
+        }
+
+        function showSummary() {
+            stopTimer();
+            if (autoNextTimeout) clearTimeout(autoNextTimeout);
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('header-bar').classList.add('hidden');
+            document.getElementById('summary-screen').classList.remove('hidden');
+
+            sound.playFanfare();
+
+            let starsCount = 1;
+            if (score >= 9) starsCount = 3;
+            else if (score >= 6) starsCount = 2;
+
+            const starContainer = document.getElementById('star-rating');
+            starContainer.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const star = document.createElement('span');
+                if (i < starsCount) {
+                    star.innerText = '⭐';
+                    star.className = 'animate-bounce';
+                    star.style.animationDelay = `${i * 0.15}s`;
+                } else {
+                    star.innerText = '⚪';
+                    star.className = 'opacity-30';
+                }
+                starContainer.appendChild(star);
+            }
+
+            const accuracy = Math.round((score / totalQuestions) * 100);
+            const mins = String(Math.floor(elapsedTime / 60)).padStart(2, '0');
+            const secs = String(elapsedTime % 60).padStart(2, '0');
+
+            document.getElementById('summary-correct').innerText = `${score} / ${totalQuestions}`;
+            document.getElementById('summary-accuracy').innerText = `${accuracy}%`;
+            document.getElementById('summary-carrots').innerText = `${carrots} 🥕`;
+            document.getElementById('summary-time').innerText = `${mins}:${secs}`;
+
+            const feedbackElem = document.getElementById('summary-feedback');
+
+            if (score === 10) {
+                feedbackElem.innerText = '太神了！滿分大滿貫！💯';
+            } else if (score >= 8) {
+                feedbackElem.innerText = '太棒了！速算小天才！🌟';
+            } else if (score >= 5) {
+                feedbackElem.innerText = '做得很棒！繼續加油喔！👍';
+            } else {
+                feedbackElem.innerText = '熟能生巧，再來挑戰一次吧！💪';
+            }
+
+            try {
+                confetti({
+                    particleCount: 100,
+                    spread: 80,
+                    origin: { y: 0.5 }
+                });
+            } catch(e){}
+        }
+
+        // Keyboard Navigation
+        window.addEventListener('keydown', (e) => {
+            const gameScreen = document.getElementById('game-screen');
+            if (gameScreen.classList.contains('hidden')) return;
+
+            if (e.key === 'Enter') {
+                const nextBtn = document.getElementById('next-btn');
+                if (!nextBtn.classList.contains('hidden')) {
+                    nextQuestion();
+                }
+                return;
+            }
+
+            if (/^[1-4]$/.test(e.key) && canAnswer) {
+                const idx = parseInt(e.key) - 1;
+                if (idx < currentOptionValues.length) {
+                    handleAnswerSelect(currentOptionValues[idx], idx);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
