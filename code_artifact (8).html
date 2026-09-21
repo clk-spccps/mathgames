@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>十格框湊十速算大挑戰 - 自由拖曳體驗版</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;600;800&display=swap">
+
+  <style>
+    * {
+      touch-action: manipulation;
+    }
+    body {
+      font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+      background-color: #f0f7ff;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow-x: hidden;
+    }
+
+    .ten-frame-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .dot-pop {
+      animation: pop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes pop {
+      0% { transform: scale(0.2); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .draggable-dot {
+      cursor: grab;
+      touch-action: none;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .draggable-dot:active {
+      cursor: grabbing;
+    }
+
+    .dragging-active {
+      position: fixed !important;
+      z-index: 9999 !important;
+      pointer-events: none !important;
+      transform: scale(1.2) !important;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3) !important;
+      opacity: 0.95;
+    }
+
+    .slot-highlight {
+      background-color: #fef08a !important;
+      border-color: #eab308 !important;
+      transform: scale(1.05);
+    }
+
+    .shake {
+      animation: shake 0.4s ease-in-out;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-12">
+
+  <header class="bg-amber-400 border-b-4 border-amber-500 shadow-md py-3 px-4 mb-4">
+    <div class="max-w-4xl mx-auto flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <div class="bg-white p-2 rounded-2xl shadow">
+          <i class="fa-solid fa-shapes text-2xl text-amber-500"></i>
+        </div>
+        <div>
+          <h1 class="text-xl md:text-2xl font-extrabold text-amber-950 tracking-wide">十格框速算大挑戰</h1>
+          <p class="text-xs text-amber-900 font-semibold">一年級數學：自由拖曳圓點「湊十法」</p>
+        </div>
+      </div>
+      
+      <!-- Score & Combo Badges -->
+      <div class="flex items-center gap-3">
+        <div class="bg-white/90 backdrop-blur rounded-2xl px-3 py-1.5 shadow-sm border border-amber-200 text-center">
+          <span class="text-xs font-bold text-slate-500 block">得分</span>
+          <span id="scoreText" class="text-xl font-extrabold text-amber-600">0</span>
+        </div>
+        <div class="bg-white/90 backdrop-blur rounded-2xl px-3 py-1.5 shadow-sm border border-amber-200 text-center">
+          <span class="text-xs font-bold text-slate-500 block">連勝</span>
+          <span id="streakText" class="text-xl font-extrabold text-orange-500">🔥 0</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-3 space-y-4">
+
+    <!-- Teacher Guide Box -->
+    <section class="bg-white rounded-3xl p-4 shadow-sm border-2 border-indigo-100 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-2xl font-bold flex-shrink-0">
+          👩‍🏫
+        </div>
+        <div>
+          <h2 id="teacherMessage" class="text-base font-bold text-slate-700">
+            用手指或滑鼠，把右邊框框的「藍色圓點」直接拖到左邊補滿 10 吧！
+          </h2>
+          <p class="text-xs text-slate-500">支援點擊或自由按住拖曳圓點到任一空格喔！</p>
+        </div>
+      </div>
+      
+      <!-- Addition Problem Board -->
+      <div class="bg-amber-50 border-2 border-amber-300 px-6 py-2 rounded-2xl flex items-center gap-3 shadow-inner">
+        <span id="numADisplay" class="text-3xl md:text-4xl font-extrabold text-rose-500">8</span>
+        <span class="text-2xl font-bold text-slate-400">+</span>
+        <span id="numBDisplay" class="text-3xl md:text-4xl font-extrabold text-blue-500">5</span>
+        <span class="text-2xl font-bold text-slate-400">=</span>
+        <span class="text-3xl md:text-4xl font-extrabold text-indigo-600">?</span>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Frame 1 (Left Target Frame) -->
+      <div id="frame1Box" class="bg-white p-4 rounded-3xl border-3 border-rose-200 shadow-sm relative">
+        <div class="flex justify-between items-center mb-2 px-1">
+          <span class="text-sm font-bold text-rose-600 flex items-center gap-1">
+            <i class="fa-solid fa-square-check"></i> 第 1 個十格框 (目標凑滿 10)
+          </span>
+          <span id="frame1CountTag" class="text-xs font-bold bg-rose-100 text-rose-700 px-2.5 py-0.5 rounded-full">
+            8 個圓點
+          </span>
+        </div>
+        <div id="frame1" class="ten-frame-grid bg-rose-50/60 p-3 rounded-2xl border-2 border-dashed border-rose-200 aspect-[5/2]">
+          <!-- 10 Slots dynamically generated -->
+        </div>
+      </div>
+
+      <!-- Frame 2 (Right Source Frame) -->
+      <div id="frame2Box" class="bg-white p-4 rounded-3xl border-3 border-blue-200 shadow-sm relative">
+        <div class="flex justify-between items-center mb-2 px-1">
+          <span class="text-sm font-bold text-blue-600 flex items-center gap-1">
+            <i class="fa-solid fa-hand-pointer"></i> 第 2 個十格框 (請拖曳此處圓點)
+          </span>
+          <span id="frame2CountTag" class="text-xs font-bold bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full">
+            5 個圓點
+          </span>
+        </div>
+        <div id="frame2" class="ten-frame-grid bg-blue-50/60 p-3 rounded-2xl border-2 border-dashed border-blue-200 aspect-[5/2]">
+          <!-- 10 Slots dynamically generated -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Action Helper Buttons -->
+    <section class="flex flex-wrap items-center justify-center gap-3">
+      <button onclick="autoMakeTen()" class="bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-4 py-2.5 rounded-2xl shadow-sm border border-amber-300 transition-all active:scale-95 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-wand-magic-sparkles text-amber-600"></i> 一鍵自動湊十
+      </button>
+      <button onclick="resetDots()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-2xl shadow-sm border border-slate-300 transition-all active:scale-95 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-rotate-left"></i> 重置圓點
+      </button>
+    </section>
+
+    <section class="bg-white rounded-3xl p-5 shadow-sm border-2 border-amber-200">
+      <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+        <h3 class="text-base font-extrabold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-calculator text-amber-500"></i>
+          「合十法」數字與符號分解歷程：
+        </h3>
+        <span id="statusBadge" class="text-xs font-bold bg-amber-100 text-amber-800 px-3 py-1 rounded-full">
+          請移動圓點開始湊十
+        </span>
+      </div>
+
+      <!-- Step Cards -->
+      <div class="space-y-4 py-1">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-center">
+          <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex flex-col items-center justify-center">
+            <span class="text-xs font-semibold text-slate-400 mb-1">第一步：拆分加數</span>
+            <div class="text-base font-bold text-slate-700">
+              把 <span class="text-blue-600" id="step1BVal">5</span> 拆成 <span class="text-rose-600 font-extrabold" id="neededValText">2</span> 與 <span class="text-indigo-600 font-extrabold" id="remainValText">3</span>
+            </div>
+            <div class="text-xs text-slate-500 mt-1" id="step1Formula">5 = 2 + 3</div>
+          </div>
+
+          <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex flex-col items-center justify-center">
+            <span class="text-xs font-semibold text-slate-400 mb-1">第二步：合滿成十</span>
+            <div class="text-base font-bold text-slate-700">
+              <span class="text-rose-600 font-extrabold" id="numATextStep">8</span> + <span class="text-rose-600 font-extrabold" id="neededValText2">2</span> = <span class="text-amber-600 font-extrabold">10</span>
+            </div>
+            <div class="text-xs text-slate-500 mt-1">第一個十格框補滿 10</div>
+          </div>
+
+          <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex flex-col items-center justify-center">
+            <span class="text-xs font-semibold text-slate-400 mb-1">第三步：加剩下的</span>
+            <div class="text-base font-bold text-slate-700">
+              <span class="text-amber-600 font-extrabold">10</span> + <span class="text-indigo-600 font-extrabold" id="remainValText2">3</span> = <span class="text-emerald-600 font-extrabold" id="finalResultStep">13</span>
+            </div>
+            <div class="text-xs text-slate-500 mt-1">一眼看穿最終答案</div>
+          </div>
+        </div>
+
+        <!-- Full Symbolic Formula Expression -->
+        <div class="bg-amber-50/70 p-3 rounded-2xl border border-amber-200 text-center">
+          <span class="text-xs font-bold text-amber-800 block mb-1">符號演繹過程：</span>
+          <div id="fullMathDeduction" class="text-base md:text-xl font-extrabold tracking-wide text-slate-800 overflow-x-auto py-1">
+            <!-- Rendered formula -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-3xl p-5 shadow-sm border-2 border-indigo-100 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3 w-full md:w-auto justify-center">
+        <label for="userAnswerInput" class="text-base font-bold text-slate-700 whitespace-nowrap">算式答案是：</label>
+        <input id="userAnswerInput" type="number" min="10" max="20" placeholder="?" class="w-20 h-12 text-center text-2xl font-extrabold text-indigo-600 bg-indigo-50 border-2 border-indigo-300 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-200">
+      </div>
+
+      <div class="flex items-center gap-3 w-full md:w-auto">
+        <button onclick="checkAnswer()" class="flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold px-6 py-3 rounded-2xl shadow-md transition-all active:scale-95 text-base flex items-center justify-center gap-2">
+          <i class="fa-solid fa-circle-check"></i> 提交答案
+        </button>
+        <button onclick="generateNewQuestion()" class="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold px-6 py-3 rounded-2xl shadow-md transition-all active:scale-95 text-base flex items-center justify-center gap-2">
+          下一題 <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Web Audio Synthesizer
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx;
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new AudioCtx();
+    }
+
+    function playPopSound() {
+      initAudio();
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(450, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(850, audioCtx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.08);
+    }
+
+    function playSuccessSound() {
+      initAudio();
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.25, now + i * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + i * 0.08);
+        osc.stop(now + i * 0.08 + 0.2);
+      });
+    }
+
+    function playErrorSound() {
+      initAudio();
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+      osc.frequency.linearRampToValueAtTime(150, audioCtx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.2);
+    }
+
+    // App State
+    let originalA = 8;
+    let originalB = 5;
+    let neededForTen = 2;
+    let movedDotsCount = 0;
+    let score = 0;
+    let streak = 0;
+
+    window.onload = function() {
+      generateNewQuestion();
+    };
+
+    function generateNewQuestion() {
+      originalA = Math.floor(Math.random() * 4) + 6; // 6, 7, 8, 9
+      neededForTen = 10 - originalA;
+      const minB = neededForTen + 1;
+      originalB = Math.floor(Math.random() * (9 - minB + 1)) + minB;
+      movedDotsCount = 0;
+
+      document.getElementById('userAnswerInput').value = '';
+      document.getElementById('numADisplay').textContent = originalA;
+      document.getElementById('numBDisplay').textContent = originalB;
+
+      renderGrids();
+      updateMathDeduction();
+
+      const teacherMsg = document.getElementById('teacherMessage');
+      teacherMsg.textContent = `請拖曳右邊框框的藍色圓點，把左邊補滿成 10 吧！`;
+      teacherMsg.className = "text-base font-bold text-slate-700";
+    }
+
+    function renderGrids() {
+      const frame1 = document.getElementById('frame1');
+      const frame2 = document.getElementById('frame2');
+      frame1.innerHTML = '';
+      frame2.innerHTML = '';
+
+      const currentCountA = originalA + movedDotsCount;
+      const currentCountB = originalB - movedDotsCount;
+
+      document.getElementById('frame1CountTag').textContent = `${currentCountA} 個圓點`;
+      document.getElementById('frame2CountTag').textContent = `${currentCountB} 個圓點`;
+
+      // Render Frame 1
+      for (let i = 0; i < 10; i++) {
+        const slot = document.createElement('div');
+        slot.dataset.frame = '1';
+        slot.dataset.slotIndex = i;
+        slot.className = 'frame-slot w-full h-full bg-white/80 rounded-xl border-2 border-rose-200 flex items-center justify-center relative shadow-inner min-h-[44px] transition-all';
+
+        if (i < originalA) {
+          // Fixed Red Dot
+          const dot = document.createElement('div');
+          dot.className = 'w-8 h-8 md:w-9 md:h-9 rounded-full bg-rose-500 border-2 border-rose-600 shadow-sm flex items-center justify-center text-white text-xs font-bold dot-pop';
+          slot.appendChild(dot);
+        } else if (i < currentCountA) {
+          // Moved Blue Dot (Can be clicked or dragged back)
+          const dot = createDraggableDot('blue', true);
+          slot.appendChild(dot);
+        } else {
+          // Empty slot in Frame 1
+          slot.onclick = () => {
+            if (movedDotsCount < neededForTen && currentCountB > 0) {
+              moveDotToFrame1();
+            }
+          };
+        }
+        frame1.appendChild(slot);
+      }
+
+      // Render Frame 2
+      for (let i = 0; i < 10; i++) {
+        const slot = document.createElement('div');
+        slot.dataset.frame = '2';
+        slot.dataset.slotIndex = i;
+        slot.className = 'frame-slot w-full h-full bg-white/80 rounded-xl border-2 border-blue-200 flex items-center justify-center relative shadow-inner min-h-[44px] transition-all';
+
+        if (i < currentCountB) {
+          // Source Blue Dot
+          const dot = createDraggableDot('blue', false);
+          slot.appendChild(dot);
+        }
+        frame2.appendChild(slot);
+      }
+    }
+
+    function createDraggableDot(color, isMoved) {
+      const dot = document.createElement('div');
+      dot.className = 'draggable-dot w-8 h-8 md:w-9 md:h-9 rounded-full bg-blue-500 border-2 border-amber-400 shadow-md flex items-center justify-center text-white text-xs font-bold dot-pop';
+      dot.innerHTML = isMoved ? '<i class="fa-solid fa-arrow-left text-[10px]"></i>' : '<i class="fa-solid fa-hand-pointer text-[10px]"></i>';
+
+      // Attach Drag / Touch pointer listeners
+      let activeClone = null;
+
+      function onPointerDown(e) {
+        e.preventDefault();
+        initAudio();
+        const rect = dot.getBoundingClientRect();
+        
+        activeClone = dot.cloneNode(true);
+        activeClone.classList.add('dragging-active');
+        activeClone.style.left = `${rect.left}px`;
+        activeClone.style.top = `${rect.top}px`;
+        activeClone.style.width = `${rect.width}px`;
+        activeClone.style.height = `${rect.height}px`;
+        document.body.appendChild(activeClone);
+
+        dot.style.opacity = '0.2';
+
+        function onPointerMove(moveEvent) {
+          const clientX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
+          const clientY = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
+          
+          if (activeClone) {
+            activeClone.style.left = `${clientX - rect.width / 2}px`;
+            activeClone.style.top = `${clientY - rect.height / 2}px`;
+          }
+
+          // Highlight drop target if hovering over Frame 1 empty slot
+          const targetElem = document.elementFromPoint(clientX, clientY);
+          document.querySelectorAll('.frame-slot').forEach(s => s.classList.remove('slot-highlight'));
+          if (targetElem) {
+            const slot = targetElem.closest('.frame-slot');
+            if (slot && slot.dataset.frame === '1' && !slot.hasChildNodes()) {
+              slot.classList.add('slot-highlight');
+            }
+          }
+        }
+
+        function onPointerUp(upEvent) {
+          document.removeEventListener('mousemove', onPointerMove);
+          document.removeEventListener('mouseup', onPointerUp);
+          document.removeEventListener('touchmove', onPointerMove);
+          document.removeEventListener('touchend', onPointerUp);
+
+          document.querySelectorAll('.frame-slot').forEach(s => s.classList.remove('slot-highlight'));
+
+          if (activeClone) {
+            const clientX = upEvent.changedTouches ? upEvent.changedTouches[0].clientX : upEvent.clientX;
+            const clientY = upEvent.changedTouches ? upEvent.changedTouches[0].clientY : upEvent.clientY;
+            const dropTarget = document.elementFromPoint(clientX, clientY);
+            
+            activeClone.remove();
+            activeClone = null;
+            dot.style.opacity = '1';
+
+            if (dropTarget) {
+              const slot = dropTarget.closest('.frame-slot');
+              if (slot) {
+                if (slot.dataset.frame === '1' && !isMoved) {
+                  moveDotToFrame1();
+                  return;
+                } else if (slot.dataset.frame === '2' && isMoved) {
+                  moveDotBack();
+                  return;
+                }
+              }
+            }
+            
+            // Fallback click behavior if not dropped in specific slot
+            if (!isMoved) {
+              moveDotToFrame1();
+            } else {
+              moveDotBack();
+            }
+          }
+        }
+
+        document.addEventListener('mousemove', onPointerMove);
+        document.addEventListener('mouseup', onPointerUp);
+        document.addEventListener('touchmove', onPointerMove, { passive: false });
+        document.addEventListener('touchend', onPointerUp);
+      }
+
+      dot.addEventListener('mousedown', onPointerDown);
+      dot.addEventListener('touchstart', onPointerDown, { passive: false });
+
+      return dot;
+    }
+
+    function moveDotToFrame1() {
+      if (movedDotsCount < neededForTen) {
+        movedDotsCount++;
+        playPopSound();
+        renderGrids();
+        updateMathDeduction();
+      }
+    }
+
+    function moveDotBack() {
+      if (movedDotsCount > 0) {
+        movedDotsCount--;
+        playPopSound();
+        renderGrids();
+        updateMathDeduction();
+      }
+    }
+
+    function autoMakeTen() {
+      movedDotsCount = neededForTen;
+      playPopSound();
+      renderGrids();
+      updateMathDeduction();
+    }
+
+    function resetDots() {
+      movedDotsCount = 0;
+      playPopSound();
+      renderGrids();
+      updateMathDeduction();
+    }
+
+    function updateMathDeduction() {
+      const needed = neededForTen;
+      const remain = originalB - needed;
+      const sum = originalA + originalB;
+
+      document.getElementById('step1BVal').textContent = originalB;
+      document.getElementById('neededValText').textContent = needed;
+      document.getElementById('remainValText').textContent = remain;
+      document.getElementById('step1Formula').textContent = `${originalB} = ${needed} + ${remain}`;
+
+      document.getElementById('numATextStep').textContent = originalA;
+      document.getElementById('neededValText2').textContent = needed;
+
+      document.getElementById('remainValText2').textContent = remain;
+      document.getElementById('finalResultStep').textContent = sum;
+
+      const statusBadge = document.getElementById('statusBadge');
+      if (movedDotsCount === needed) {
+        statusBadge.textContent = '🎉 已成功湊滿 10！';
+        statusBadge.className = 'text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full';
+      } else if (movedDotsCount > 0) {
+        statusBadge.textContent = `還差 ${needed - movedDotsCount} 個點點補滿 10`;
+        statusBadge.className = 'text-xs font-bold bg-amber-100 text-amber-800 px-3 py-1 rounded-full';
+      } else {
+        statusBadge.textContent = '請拖曳圓點開始湊十';
+        statusBadge.className = 'text-xs font-bold bg-slate-100 text-slate-700 px-3 py-1 rounded-full';
+      }
+
+      const deductionContainer = document.getElementById('fullMathDeduction');
+      deductionContainer.innerHTML = `
+        <span class="text-rose-500">${originalA}</span> + 
+        <span class="text-blue-500">${originalB}</span>
+        <span class="text-slate-400 mx-1">=</span>
+        <span class="text-rose-500">${originalA}</span> + 
+        (<span class="text-rose-600 font-black">${needed}</span> + <span class="text-indigo-600 font-black">${remain}</span>)
+        <span class="text-slate-400 mx-1">=</span>
+        (<span class="text-rose-500">${originalA}</span> + <span class="text-rose-600 font-black">${needed}</span>) + <span class="text-indigo-600 font-black">${remain}</span>
+        <span class="text-slate-400 mx-1">=</span>
+        <span class="text-amber-600">10</span> + <span class="text-indigo-600 font-black">${remain}</span>
+        <span class="text-slate-400 mx-1">=</span>
+        <span class="text-emerald-600 font-black">${sum}</span>
+      `;
+    }
+
+    function checkAnswer() {
+      const userInput = document.getElementById('userAnswerInput').value.trim();
+      const correctAnswer = originalA + originalB;
+      const teacherMsg = document.getElementById('teacherMessage');
+
+      if (!userInput) {
+        teacherMsg.textContent = '⚠️ 請先在空格填入你的答案喔！';
+        teacherMsg.className = 'text-base font-bold text-amber-600';
+        playErrorSound();
+        return;
+      }
+
+      if (parseInt(userInput, 10) === correctAnswer) {
+        playSuccessSound();
+        score += 10;
+        streak += 1;
+        document.getElementById('scoreText').textContent = score;
+        document.getElementById('streakText').textContent = `🔥 ${streak}`;
+
+        teacherMsg.textContent = `🎉 太棒了！答對了！${originalA} + ${originalB} = ${correctAnswer}！`;
+        teacherMsg.className = 'text-base font-bold text-emerald-600';
+
+        confetti({
+          particleCount: 85,
+          spread: 75,
+          origin: { y: 0.6 }
+        });
+
+      } else {
+        playErrorSound();
+        streak = 0;
+        document.getElementById('streakText').textContent = `🔥 0`;
+
+        teacherMsg.textContent = `💪 再試一次喔！算式是「10 + ${originalB - neededForTen}」，答案是多少呢？`;
+        teacherMsg.className = 'text-base font-bold text-rose-600';
+
+        const inputEl = document.getElementById('userAnswerInput');
+        inputEl.classList.add('shake');
+        setTimeout(() => inputEl.classList.remove('shake'), 500);
+      }
+    }
+  </script>
+</body>
+</html>
