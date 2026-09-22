@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歡迎進入奇妙的數學世界 🏰✨</title>
+    <style>
+        :root {
+            --disney-purple: #6c5ce7;
+            --disney-pink: #fd79a8;
+            --disney-blue: #0984e3;
+            --disney-yellow: #f1c40f;
+            --bg-color: #f3f0ff;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'PingFang HK', 'Microsoft JhengHei', sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(#d6c7ff 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+            margin: 0;
+            padding: 20px;
+            color: #2d3436;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+        }
+
+        /* Disneyland Banner Header */
+        header {
+            text-align: center;
+            padding: 35px 20px;
+            background: linear-gradient(135deg, #a29bfe, #fd79a8, #74b9ff);
+            color: white;
+            border-radius: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(108, 92, 231, 0.25);
+            border: 4px solid #ffffff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.3em;
+            text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.15);
+            letter-spacing: 2px;
+        }
+
+        header p {
+            margin-top: 10px;
+            font-size: 1.15em;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.25);
+            display: inline-block;
+            padding: 6px 18px;
+            border-radius: 20px;
+        }
+
+        /* Nav link back to main hub */
+        .back-link {
+            display: inline-block;
+            margin-bottom: 15px;
+            color: var(--disney-purple);
+            text-decoration: none;
+            font-weight: bold;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 15px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+        }
+
+        .back-link:hover {
+            transform: scale(1.05);
+        }
+
+        /* Levels Table Container */
+        .level-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 15px;
+        }
+
+        .level-row {
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+        }
+
+        .grade-header {
+            width: 130px;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            color: white;
+            border-radius: 20px 0 0 20px;
+            vertical-align: middle;
+        }
+
+        /* Distinct Colors for Grades */
+        .g1 { background: linear-gradient(135deg, #ff7675, #fab1a0); }
+        .g2 { background: linear-gradient(135deg, #ff7675, #fd79a8); }
+        .g3 { background: linear-gradient(135deg, #fdcb6e, #ffeaa7); color: #d35400 !important; }
+        .g4 { background: linear-gradient(135deg, #55efc4, #00b894); }
+        .g5 { background: linear-gradient(135deg, #74b9ff, #0984e3); }
+        .g6 { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+
+        .games-cell {
+            padding: 20px;
+            border-radius: 0 20px 20px 0;
+            background-color: white;
+        }
+
+        .game-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        /* App-Style Game Button Cards */
+        .app-card {
+            width: 130px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 22px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            user-select: none;
+        }
+
+        .app-card:hover {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 10px 20px rgba(108, 92, 231, 0.2);
+            border-color: var(--disney-purple);
+            background: #ffffff;
+        }
+
+        .app-icon {
+            font-size: 2.5em;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .app-title {
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #2d3436;
+            line-height: 1.3;
+        }
+
+        .app-badge {
+            font-size: 0.7em;
+            background: #ffeaa7;
+            color: #d35400;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-top: 6px;
+            font-weight: bold;
+        }
+
+        /* Disabled / Locked App Style */
+        .app-card.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-style: dashed;
+        }
+
+        .app-card.locked:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Game Pop-up Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-container {
+            background: white;
+            width: 90%;
+            max-width: 900px;
+            height: 85vh;
+            border-radius: 25px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--disney-purple), var(--disney-pink));
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .close-btn {
+            background: rgba(255,255,255,0.25);
+            border: none;
+            color: white;
+            font-size: 1.3em;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .close-btn:hover {
+            background: rgba(255,255,255,0.5);
+        }
+
+        .modal-body {
+            flex: 1;
+            background: #f8f9fa;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="index.html" class="back-link">🏠 返加主頁 Learning Hub</a>
+
+    <header>
+        <h1>🏰 歡迎進入奇妙的數學世界 ✨</h1>
+        <p>選擇你的年級與數學關卡，展開冒險吧！</p>
+    </header>
+
+    <table class="level-table">
+        
+        <!-- P1 一年級 -->
+        <tr class="level-row">
+            <td class="grade-header g1">🎒<br>一年級</td>
+            <td class="games-cell">
+                <div class="game-grid">
+                    <div class="app-card" onclick="openGame('math_p1_add.html', '加減法大冒險 🍎')">
+                        <div class="app-icon">🍎</div>
+                        <div class="app-title">加減法<br>大冒險</div>
+                        <div class="app-badge">20以內</div>
+                    </div>
+                    <div class="app-card locked">
+                        <div class="app-icon">🔒</div>
+                        <div class="app-title">形狀與<br>圖形</div>
+                        <div class="app-badge">準備中</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+
+        <!-- P2 二年級 -->
+        <tr class="level-row">
+            <td class="grade-header g2">✏️<br>二年級</td>
+            <td class="games-cell">
+                <div class="game-grid">
+                    <div class="app-card locked">
+                        <div class="app-icon">🔒</div>
+                        <div class="app-title">九九<br>乘法表</div>
+                        <div class="app-badge">準備中</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+
+        <!-- P3 三年級 -->
+        <tr class="level-row">
+            <td class="grade-header g3">⭐<br>三年級</td>
+            <td class="games-cell">
+                <div class="game-grid">
+                    <div class="app-card locked">
+                        <div class="app-icon">🔒</div>
+                        <div class="app-title">除法與<br>餘數</div>
+                        <div class="app-badge">準備中</div>
+                    </div>
+                    <div class="app-card locked">
+                        <div class="app-icon">🔒</div>
+                        <div class="app-title">時間與<br>時鐘</div>
+                        <div class="app-badge">準備中</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+
+        <!-- P4 四年級 -->
+        <tr class="level-row">
+            <td class="grade-header g4">🚀<br>四年級</td>
+            <td class="games-cell">
+                <div class="game-grid">
+                    <div class="app-card locked">
+                        <div class="app-icon">🔒</div>
+                        <div class="app-title">分數<br>入門</div>
+                        <div class="app-badge">準備中</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+
+        <!-- P5 五年級 -->
+        <tr class="level-row">
+            <td class="grade-header g5">💎<br>五年級</td>
+            <td class="games-cell">
+                <div class="game-grid">
+                    <div class="app-card locked">
+                        <div class="app-icon">🔒</div>
+                        <div class="app-title">小數與<br>百分比</div>
+                        <div class="app-badge">準備中</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+
+        <!-- P6 六年級 -->
+        <tr class="level-row">
+            <td class="grade-header g6">👑<br>六年級</td>
+            <td class="games-cell">
+                <div class="game-grid">
+                    <div class="app-card locked">
+                        <div class="app-icon">🔒</div>
+                        <div class="app-title">代數與<br>方程</div>
+                        <div class="app-badge">準備中</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+
+    </table>
+</div>
+
+<!-- Pop-up Game Modal Container -->
+<div class="modal-overlay" id="gameModal">
+    <div class="modal-container">
+        <div class="modal-header">
+            <span class="modal-title" id="modalTitle">遊戲載入中...</span>
+            <button class="close-btn" onclick="closeGame()">✕</button>
+        </div>
+        <div class="modal-body">
+            <iframe id="gameIframe" src=""></iframe>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openGame(url, title) {
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('gameIframe').src = url;
+        document.getElementById('gameModal').style.display = 'flex';
+    }
+
+    function closeGame() {
+        document.getElementById('gameModal').style.display = 'none';
+        document.getElementById('gameIframe').src = ''; // Clear iframe to stop audio/game in background
+    }
+</script>
+
+</body>
+</html>
