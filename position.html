@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小神探空間大搜尋</title>
+    <style>
+        /* Reset & Strict Single Screen Viewport */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            background: #FFF9E6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* App Outer Wrapper */
+        .app-wrapper {
+            width: 100%;
+            max-width: 480px;
+            height: 100%;
+            height: 100dvh;
+            background: #FFFFFF;
+            border: 3px solid #FFC107;
+            display: flex;
+            flex-direction: column;
+            padding: 6px;
+            gap: 6px;
+        }
+
+        /* Section 1: Compact Header (10% height) */
+        header {
+            background: #FFE082;
+            padding: 4px 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 38px;
+            flex-shrink: 0;
+        }
+
+        .app-title {
+            font-size: 14px;
+            font-weight: 900;
+            color: #5D4037;
+        }
+
+        .score-pill {
+            background: #FFF;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 900;
+            color: #E65100;
+            border: 1.5px solid #FFB74D;
+        }
+
+        /* Section 2: Compact Level Selector Bar (10% height) */
+        nav {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            height: 36px;
+            flex-shrink: 0;
+        }
+
+        .nav-btn {
+            background: #FFF8E1;
+            border: 2px solid #FFE082;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 900;
+            color: #5D4037;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            line-height: 1.1;
+            padding: 2px;
+        }
+
+        .nav-btn.active {
+            background: #FFB300;
+            color: #FFF;
+            border-color: #FF8F00;
+            box-shadow: inset 0 -2px 0 rgba(0,0,0,0.15);
+        }
+
+        /* Section 3: Middle Interactive Stage (42% height - Extra Large Objects) */
+        .stage-area {
+            flex: 1;
+            background: #FAFAFA;
+            border: 2px dashed #FFCA28;
+            border-radius: 12px;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        /* Grid View (Lvl 1, 2, 4) */
+        .grid-layout {
+            display: grid;
+            gap: 6px;
+            width: 100%;
+            height: 100%;
+            max-width: 320px;
+            max-height: 320px;
+            margin: auto;
+        }
+
+        .grid-card {
+            background: #FFF;
+            border: 2px solid #FFE082;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .grid-card:active {
+            transform: scale(0.96);
+        }
+
+        .card-emoji {
+            font-size: clamp(32px, 7vh, 48px);
+            line-height: 1;
+        }
+
+        .card-label {
+            font-size: clamp(11px, 2vh, 13px);
+            font-weight: 900;
+            color: #37474F;
+            margin-top: 2px;
+        }
+
+        /* Queue View (Lvl 3 - Side View Animal Queue) */
+        .queue-layout {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2px;
+        }
+
+        .queue-banner {
+            background: #FFF3E0;
+            border: 1px dashed #FFB74D;
+            border-radius: 6px;
+            padding: 3px 6px;
+            font-size: 11px;
+            font-weight: 900;
+            color: #E65100;
+            text-align: center;
+        }
+
+        .queue-line {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            width: 100%;
+            flex: 1;
+        }
+
+        .truck-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-right: 4px;
+            border-right: 2px dashed #B0BEC5;
+            flex-shrink: 0;
+        }
+
+        .animal-card {
+            background: #FFF;
+            border: 2px solid #FFE082;
+            border-radius: 8px;
+            padding: 3px 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            margin: 0 2px;
+            height: 80%;
+            cursor: pointer;
+        }
+
+        .order-tag {
+            background: #FFE0B2;
+            color: #E65100;
+            font-size: 9px;
+            font-weight: 900;
+            padding: 1px 4px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* Side-view animals scaled/flipped to 100% face LEFT (👈🍦) */
+        .animal-emoji {
+            font-size: clamp(28px, 6vh, 40px);
+            line-height: 1.1;
+            display: inline-block;
+        }
+
+        .facing-left {
+            transform: scaleX(1);
+        }
+
+        .flip-to-left {
+            transform: scaleX(-1);
+        }
+
+        /* Section 4: Bottom Question & Answer Buttons (38% height) */
+        .bottom-area {
+            height: 38%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: #F1F8E9;
+            padding: 6px;
+            border-radius: 12px;
+            border: 2px solid #AED581;
+            flex-shrink: 0;
+        }
+
+        .question-box {
+            background: #E1F5FE;
+            border: 2px solid #81D4FA;
+            border-radius: 8px;
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 44px;
+        }
+
+        .q-badge {
+            background: #0288D1;
+            color: #FFF;
+            font-size: 10px;
+            font-weight: 900;
+            padding: 1px 4px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 2px;
+        }
+
+        .q-title {
+            font-size: clamp(13px, 2.3vh, 15px);
+            font-weight: 900;
+            color: #01579B;
+            line-height: 1.2;
+        }
+
+        .tts-btn {
+            background: #0288D1;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            font-size: 15px;
+            cursor: pointer;
+            flex-shrink: 0;
+            margin-left: 4px;
+            box-shadow: 0 2px 0 #01579B;
+        }
+
+        .tts-btn:active {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+
+        .feedback-banner {
+            font-size: 12px;
+            font-weight: 900;
+            text-align: center;
+            padding: 3px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .is-correct { background: #C8E6C9; color: #1B5E20; border: 1px solid #81C784; }
+        .is-wrong { background: #FFCDD2; color: #B71C1C; border: 1px solid #E57373; }
+
+        .answers-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .answers-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .answer-btn {
+            background: #FFF8E1;
+            border: 2px solid #FFE082;
+            border-radius: 8px;
+            padding: 4px;
+            font-size: clamp(13px, 2.5vh, 15px);
+            font-weight: 900;
+            color: #4E342E;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 0 #FFD54F;
+            text-align: center;
+        }
+
+        .answer-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #FFD54F;
+        }
+
+        .click-prompt {
+            background: #DCEDC8;
+            color: #33691E;
+            border: 1px dashed #689F38;
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 900;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .footer-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 28px;
+        }
+
+        .action-btn {
+            background: #4CAF50;
+            color: #FFF;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 2px 0 #2E7D32;
+        }
+
+        .action-btn:active {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+
+        .hint-bg { background: #FF9800; box-shadow: 0 2px 0 #E65100; }
+
+        /* Modal */
+        .cert-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 100;
+        }
+
+        .cert-box {
+            background: #FFF;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            border: 4px solid #FFC107;
+            max-width: 300px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-wrapper">
+        <!-- Section 1: Header -->
+        <header>
+            <div class="app-title">🕵️‍♂️ 小神探空間大搜尋</div>
+            <div class="score-pill">⭐ 得分：<span id="scoreVal">0</span></div>
+        </header>
+
+        <!-- Section 2: Compact Level Selector Bar -->
+        <nav>
+            <button id="lvlBtn1" class="nav-btn active" onclick="switchLevel(1)">關卡 1<br>上下</button>
+            <button id="lvlBtn2" class="nav-btn" onclick="switchLevel(2)">關卡 2<br>左右</button>
+            <button id="lvlBtn3" class="nav-btn" onclick="switchLevel(3)">關卡 3<br>前後與之間</button>
+            <button id="lvlBtn4" class="nav-btn" onclick="switchLevel(4)">關卡 4<br>綜合大考驗</button>
+        </nav>
+
+        <!-- Section 3: Middle Interactive Stage (42% height - Extra Large Objects) -->
+        <div id="stageArea" class="stage-area"></div>
+
+        <!-- Section 4: Bottom Question & Answers -->
+        <div class="bottom-area">
+            <div class="question-box">
+                <div style="flex: 1;">
+                    <span id="qBadge" class="q-badge">第 1 題</span>
+                    <div id="qTitle" class="q-title">載入中...</div>
+                </div>
+                <button class="tts-btn" onclick="readQuestion()" title="朗讀題目">🔊</button>
+            </div>
+
+            <div id="feedbackBanner" class="feedback-banner"></div>
+
+            <div id="answersArea" class="answers-container"></div>
+
+            <div class="footer-controls">
+                <button class="action-btn hint-bg" onclick="getHint()">💡 提示</button>
+                <span id="qProgress" style="font-size:11px; font-weight:900; color:#558B2F;">進度：1/4</span>
+                <button id="nextQuestionBtn" class="action-btn" style="display:none;" onclick="loadNextQuestion()">下一題 ➔</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Certificate Modal -->
+    <div id="certModal" class="cert-modal">
+        <div class="cert-box">
+            <div style="font-size:44px;">🏆</div>
+            <h3 style="color:#5D4037; font-size:18px; font-weight:900; margin:4px 0;">榮譽大神探證書</h3>
+            <p id="certMsg" style="font-size:13px; color:#424242; margin-bottom:14px; line-height:1.4;"></p>
+            <button class="action-btn" style="width:100%; background:#FF9800; padding:8px; font-size:13px;" onclick="restartGame()">🔄 再玩一次（全新題目）</button>
+        </div>
+    </div>
+
+    <script>
+        // Item Pools
+        const OBJECT_ITEMS = [
+            { name: '偵探帽', emoji: '🤠', bg: '#FFF8E1' },
+            { name: '放大鏡', emoji: '🔍', bg: '#E0F7FA' },
+            { name: '玩具熊', emoji: '🧸', bg: '#FFEBEE' },
+            { name: '故事書', emoji: '📚', bg: '#E8EAF6' },
+            { name: '紅蘋果', emoji: '🍎', bg: '#FFEBEE' },
+            { name: '小汽車', emoji: '🚗', bg: '#E3F2FD' },
+            { name: '機器人', emoji: '🤖', bg: '#ECEFF1' },
+            { name: '禮物盒', emoji: '🎁', bg: '#F3E5F5' }
+        ];
+
+        // Side-view Animals facing LEFT (👈🍦)
+        const QUEUE_ANIMALS = [
+            { name: '小狗', emoji: '🐕', flip: 'facing-left', bg: '#FFF3E0' },
+            { name: '小貓', emoji: '🐈', flip: 'facing-left', bg: '#FFF8E1' },
+            { name: '小兔', emoji: '🐇', flip: 'facing-left', bg: '#FCE4EC' },
+            { name: '大象', emoji: '🐘', flip: 'facing-left', bg: '#E0F7FA' },
+            { name: '小馬', emoji: '🐎', flip: 'facing-left', bg: '#EFEBE9' }
+        ];
+
+        let gameQuestions = {};
+        let currentLevel = 1;
+        let questionIndex = 0;
+        let score = 0;
+        let answered = false;
+
+        function shuffleList(arr) {
+            return [...arr].sort(() => Math.random() - 0.5);
+        }
+
+        function triggerSound(isCorrect) {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                if (isCorrect) {
+                    osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+                    osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+                } else {
+                    osc.frequency.setValueAtTime(220, ctx.currentTime); // A3
+                }
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.25);
+            } catch(e) {}
+        }
+
+        function generateDynamicQuestions() {
+            gameQuestions = { 1: [], 2: [], 3: [], 4: [] };
+
+            for (let lvl = 1; lvl <= 4; lvl++) {
+                for (let q = 0; q < 4; q++) {
+                    if (lvl === 1) { // 上下
+                        const pool = shuffleList(OBJECT_ITEMS).slice(0, 3);
+                        const isTop = Math.random() > 0.5;
+                        const subject = isTop ? pool[0] : pool[2];
+                        const reference = pool[1];
+
+                        if (q % 2 === 0) {
+                            gameQuestions[1].push({
+                                type: 'mc', layout: pool, rows: 3, cols: 1,
+                                question: `【${subject.name}】在【${reference.name}】的哪一方？`,
+                                options: shuffleList(['上方', '下方', '左方', '右方']),
+                                correct: isTop ? '上方' : '下方',
+                                hint: `看看 ${subject.name} 是在 ${reference.name} 的上面還是下面？`
+                            });
+                        } else {
+                            gameQuestions[1].push({
+                                type: 'click', layout: pool, rows: 3, cols: 1,
+                                question: `請點擊位於【${reference.name}】「${isTop ? '上方' : '下方'}」的物件！`,
+                                target: subject.name,
+                                hint: `直接點擊 ${reference.name} ${isTop ? '上方' : '下方'} 的物品！`
+                            });
+                        }
+                    } else if (lvl === 2) { // 左右
+                        const pool = shuffleList(OBJECT_ITEMS).slice(0, 3);
+                        const isLeft = Math.random() > 0.5;
+                        const subject = isLeft ? pool[0] : pool[2];
+                        const reference = pool[1];
+
+                        if (q % 2 === 0) {
+                            gameQuestions[2].push({
+                                type: 'mc', layout: pool, rows: 1, cols: 3,
+                                question: `【${subject.name}】在【${reference.name}】的哪一方？`,
+                                options: shuffleList(['左方', '右方', '上方', '下方']),
+                                correct: isLeft ? '左方' : '右方',
+                                hint: `觀察 ${subject.name} 是在 ${reference.name} 的左邊還是右邊？`
+                            });
+                        } else {
+                            gameQuestions[2].push({
+                                type: 'click', layout: pool, rows: 1, cols: 3,
+                                question: `請點擊位於【${reference.name}】「${isLeft ? '左方' : '右方'}」的物件！`,
+                                target: subject.name,
+                                hint: `點擊 ${reference.name} ${isLeft ? '左方' : '右方'} 的物品！`
+                            });
+                        }
+                    } else if (lvl === 3) { // 前後與之間
+                        const queue = shuffleList(QUEUE_ANIMALS);
+                        if (q < 2) {
+                            const isFront = Math.random() > 0.5;
+                            const subject = isFront ? queue[0] : queue[2];
+                            gameQuestions[3].push({
+                                type: 'mc', queue,
+                                question: `🍦排隊買雪糕：【${subject.name}】排在【${queue[1].name}】的哪裡？`,
+                                options: shuffleList(['前面', '後面', '左邊', '右邊']),
+                                correct: isFront ? '前面' : '後面',
+                                hint: `小動物身體與眼睛看向左側雪糕車的方向就是「前面」！`
+                            });
+                        } else if (q === 2) {
+                            const correctAns = `${queue[0].name}和${queue[2].name}`;
+                            gameQuestions[3].push({
+                                type: 'mc', queue,
+                                question: `【${queue[1].name}】排在哪兩個小動物「之間」？`,
+                                options: shuffleList([correctAns, '小貓和小狗', '大象和小馬']),
+                                correct: correctAns,
+                                hint: `夾在 ${queue[1].name} 正前面與正後面的是哪兩隻小動物？`
+                            });
+                        } else {
+                            gameQuestions[3].push({
+                                type: 'click', queue,
+                                question: `請點擊排在最「前面」（第 1 位）的小動物！`,
+                                target: queue[0].name,
+                                hint: `點擊最靠近雪糕車的小動物！`
+                            });
+                        }
+                    } else if (lvl === 4) { // 綜合九宮格
+                        const pool = shuffleList(OBJECT_ITEMS).slice(0, 9);
+                        const center = pool[4];
+                        const dirs = [{ label: '上方', idx: 1 }, { label: '下方', idx: 7 }, { label: '左方', idx: 3 }, { label: '右方', idx: 5 }];
+                        const chosenDir = dirs[Math.floor(Math.random() * dirs.length)];
+                        const subject = pool[chosenDir.idx];
+
+                        gameQuestions[4].push({
+                            type: 'mc', layout: pool, rows: 3, cols: 3,
+                            question: `【${subject.name}】在中間【${center.name}】的哪一方？`,
+                            options: shuffleList(['上方', '下方', '左方', '右方']),
+                            correct: chosenDir.label,
+                            hint: `先找到中間的 ${center.name}，看看 ${subject.name} 在它的哪個方向！`
+                        });
+                    }
+                }
+            }
+        }
+
+        function displayQuestion() {
+            answered = false;
+            const q = gameQuestions[currentLevel][questionIndex];
+
+            document.getElementById('qBadge').innerText = `第 ${questionIndex + 1} / 4 題`;
+            document.getElementById('qProgress').innerText = `進度：${questionIndex + 1}/4`;
+            document.getElementById('qTitle').innerText = q.question;
+
+            const fb = document.getElementById('feedbackBanner');
+            fb.style.display = 'none';
+            document.getElementById('nextQuestionBtn').style.display = 'none';
+
+            const stage = document.getElementById('stageArea');
+            stage.innerHTML = '';
+
+            if (currentLevel === 3) {
+                drawQueueStage(stage, q);
+            } else {
+                drawGridStage(stage, q);
+            }
+
+            drawAnswersSection(q);
+        }
+
+        function drawGridStage(container, q) {
+            const grid = document.createElement('div');
+            grid.className = 'grid-layout';
+            grid.style.gridTemplateRows = `repeat(${q.rows}, 1fr)`;
+            grid.style.gridTemplateColumns = `repeat(${q.cols}, 1fr)`;
+
+            q.layout.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'grid-card';
+                card.style.background = item.bg;
+                card.innerHTML = `<span class="card-emoji">${item.emoji}</span><span class="card-label">${item.name}</span>`;
+                if (q.type === 'click') {
+                    card.onclick = () => evaluateAnswer(item.name, q.target);
+                }
+                grid.appendChild(card);
+            });
+
+            container.appendChild(grid);
+        }
+
+        function drawQueueStage(container, q) {
+            const queueLayout = document.createElement('div');
+            queueLayout.className = 'queue-layout';
+
+            const banner = document.createElement('div');
+            banner.className = 'queue-banner';
+            banner.innerText = '🍦 雪糕車（隊頭 / 前面）⬅️ 眼睛與身體全部朝左👈';
+            queueLayout.appendChild(banner);
+
+            const line = document.createElement('div');
+            line.className = 'queue-line';
+
+            const truck = document.createElement('div');
+            truck.className = 'truck-card';
+            truck.innerHTML = `<span style="font-size:clamp(28px, 6vh, 40px);">🚚🍦</span><span style="font-size:10px; font-weight:900; color:#E65100;">隊頭</span>`;
+            line.appendChild(truck);
+
+            q.queue.forEach((animal, idx) => {
+                const animalCard = document.createElement('div');
+                animalCard.className = 'animal-card';
+                animalCard.style.background = animal.bg;
+                animalCard.innerHTML = `
+                    <span class="order-tag">第 ${idx + 1} 位</span>
+                    <span class="animal-emoji ${animal.flip}">${animal.emoji}</span>
+                    <span style="font-size:11px; font-weight:900; color:#37474F;">${animal.name}</span>
+                `;
+                if (q.type === 'click') {
+                    animalCard.onclick = () => evaluateAnswer(animal.name, q.target);
+                }
+                line.appendChild(animalCard);
+            });
+
+            queueLayout.appendChild(line);
+            container.appendChild(queueLayout);
+        }
+
+        function drawAnswersSection(q) {
+            const container = document.getElementById('answersArea');
+            container.innerHTML = '';
+
+            if (q.type === 'mc') {
+                const grid = document.createElement('div');
+                grid.className = 'answers-grid';
+                q.options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'answer-btn';
+                    btn.innerText = opt;
+                    btn.onclick = () => evaluateAnswer(opt, q.correct);
+                    grid.appendChild(btn);
+                });
+                container.appendChild(grid);
+            } else {
+                const prompt = document.createElement('div');
+                prompt.className = 'click-prompt';
+                prompt.innerText = '👆 請直接點擊上方畫板中的正確物件！';
+                container.appendChild(prompt);
+            }
+        }
+
+        function evaluateAnswer(selected, correct) {
+            if (answered) return;
+            answered = true;
+
+            const fb = document.getElementById('feedbackBanner');
+            fb.style.display = 'block';
+
+            if (selected === correct) {
+                triggerSound(true);
+                score += 25;
+                document.getElementById('scoreVal').innerText = score;
+                fb.className = 'feedback-banner is-correct';
+                fb.innerText = '🎉 答對囉！太棒了！ (+25分)';
+            } else {
+                triggerSound(false);
+                fb.className = 'feedback-banner is-wrong';
+                fb.innerText = `❌ 答錯囉，正確答案是【${correct}】`;
+            }
+            document.getElementById('nextQuestionBtn').style.display = 'inline-block';
+        }
+
+        function switchLevel(lvl) {
+            currentLevel = lvl;
+            questionIndex = 0;
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById(`lvlBtn${i}`).className = (i === lvl) ? 'nav-btn active' : 'nav-btn';
+            }
+            displayQuestion();
+        }
+
+        function loadNextQuestion() {
+            if (questionIndex < 3) {
+                questionIndex++;
+                displayQuestion();
+            } else {
+                if (currentLevel < 4) {
+                    switchLevel(currentLevel + 1);
+                } else {
+                    document.getElementById('certMsg').innerText = `恭喜你通關！總得分：${score} 分！`;
+                    document.getElementById('certModal').style.display = 'flex';
+                }
+            }
+        }
+
+        function readQuestion() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const text = document.getElementById('qTitle').innerText;
+                const uttr = new SpeechSynthesisUtterance(text);
+                uttr.lang = 'zh-HK';
+                uttr.rate = 0.85;
+                window.speechSynthesis.speak(uttr);
+            }
+        }
+
+        function getHint() {
+            alert(`💡 提示：${gameQuestions[currentLevel][questionIndex].hint}`);
+        }
+
+        function restartGame() {
+            score = 0;
+            document.getElementById('scoreVal').innerText = '0';
+            document.getElementById('certModal').style.display = 'none';
+            generateDynamicQuestions();
+            switchLevel(1);
+        }
+
+        window.onload = function() {
+            generateDynamicQuestions();
+            displayQuestion();
+        };
+    </script>
+</body>
+</html>
